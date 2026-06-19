@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zyro Quiz – Buzzer</title>
+  <meta name="description" content="Zyro Quiz – Real-time quiz buzzer competition platform">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #050508;
+      --bg-card: rgba(20, 20, 25, 0.6);
+      --bg-card-hover: rgba(30, 20, 25, 0.8);
+      --text-primary: #f5f5fa;
+      --text-secondary: #a08888;
+      --accent: #ff3838;
+      --accent-glow: rgba(255, 56, 56, 0.4);
+      --buzzer-active: #ff3838;
+      --buzzer-glow: rgba(255, 56, 56, 0.6);
+      --buzzer-pressed: #2ecc71;
+      --buzzer-pressed-glow: rgba(46, 204, 113, 0.5);
+      --buzzer-disabled: #4a3333;
+      --danger: #ff3838;
+      --success: #2ecc71;
+      --border: rgba(255, 56, 56, 0.15);
+      --radius: 16px;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: 
+        radial-gradient(ellipse at 20% 50%, rgba(255, 56, 56, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 56, 56, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(20, 20, 30, 0.5) 0%, transparent 50%);
+      animation: bgDrift 20s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes bgDrift {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-5%, 3%) rotate(3deg); }
+    }
+
+    /* Noise texture overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      padding-top: 90px; /* offset fixed header */
+    }
+
+    /* Fixed top header */
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      background: linear-gradient(to bottom, rgba(5, 5, 8, 0.95) 60%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 56, 56, 0.12);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .header-link {
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .header-link:hover {
+      transform: scale(1.06);
+    }
+
+    .header-logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, #ffffff 30%, #ff3838 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 15px rgba(255, 56, 56, 0.5);
+    }
+
+    /* ===== JOIN SCREEN ===== */
+    #join-screen {
+      animation: fadeSlideUp 0.6s ease-out;
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .logo-img {
+      width: 100px;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 0 25px rgba(255, 56, 56, 0.4);
+      border: 1px solid rgba(255, 56, 56, 0.2);
+      animation: pulseGlow 3s infinite alternate ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0% {
+        box-shadow: 0 0 20px rgba(255, 56, 56, 0.3);
+        transform: scale(1);
+      }
+      100% {
+        box-shadow: 0 0 45px rgba(255, 56, 56, 0.75);
+        transform: scale(1.04);
+      }
+    }
+
+    .logo h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 0%, #ff9999 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-top: 4px;
+      font-weight: 300;
+    }
+
+    /* Glow scan effect on card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 56, 56, 0.05);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        45deg,
+        transparent 45%,
+        rgba(255, 56, 56, 0.1) 50%,
+        transparent 55%
+      );
+      transform: rotate(45deg);
+      animation: laserSweep 6s infinite linear;
+      pointer-events: none;
+    }
+
+    @keyframes laserSweep {
+      0% { transform: translate(-30%, -30%) rotate(45deg); }
+      100% { transform: translate(30%, 30%) rotate(45deg); }
+    }
+
+    /* Particles background */
+    .particles-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      background: linear-gradient(135deg, var(--accent) 0%, #ff333d 100%);
+      clip-path: polygon(50% 0%, 55% 45%, 100% 50%, 55% 55%, 50% 100%, 45% 55%, 0% 50%, 45% 45%);
+      box-shadow: 0 0 10px var(--accent-glow);
+      opacity: 0.35;
+      animation: floatAround 18s linear infinite;
+    }
+
+    @keyframes floatAround {
+      0% {
+        transform: translateY(105vh) translateX(0) scale(0.6);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.35;
+      }
+      90% {
+        opacity: 0.35;
+      }
+      100% {
+        transform: translateY(-10vh) translateX(60px) scale(0.3);
+        opacity: 0;
+      }
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+
+    .input-group {
+      margin-bottom: 24px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 400;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .input-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .input-group input::placeholder {
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #b30000);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* ===== BUZZER SCREEN ===== */
+    #buzzer-screen {
+      display: none;
+      text-align: center;
+      animation: fadeSlideUp 0.6s ease-out;
+    }
+
+    .team-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      backdrop-filter: blur(20px);
+    }
+
+    .team-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .team-badge .name {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Buzzer button */
+    .buzzer-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 40px;
+    }
+
+    .buzzer-ring {
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      border: 2px solid rgba(231, 76, 60, 0.15);
+      animation: ring-pulse 2s ease-in-out infinite;
+    }
+
+    .buzzer-ring:nth-child(2) {
+      inset: -40px;
+      border-color: rgba(231, 76, 60, 0.08);
+      animation-delay: 0.5s;
+    }
+
+    @keyframes ring-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.5; }
+    }
+
+    .buzzer-btn {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: none;
+      background: radial-gradient(circle at 35% 35%, #ff6b6b, var(--buzzer-active), #c0392b);
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+      transition: all 0.15s ease;
+      box-shadow: 
+        0 8px 32px var(--buzzer-glow),
+        inset 0 -6px 12px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+    }
+
+    .buzzer-btn:hover {
+      transform: scale(1.03);
+      box-shadow: 
+        0 12px 48px var(--buzzer-glow),
+        inset 0 -6px 12px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+    }
+
+    .buzzer-btn:active {
+      transform: scale(0.97);
+      box-shadow: 
+        0 4px 16px var(--buzzer-glow),
+        inset 0 4px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .buzzer-btn.pressed {
+      background: radial-gradient(circle at 35% 35%, #69db7c, var(--buzzer-pressed), #1a9c49);
+      box-shadow: 
+        0 8px 32px var(--buzzer-pressed-glow),
+        inset 0 -6px 12px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      animation: buzzConfirm 0.4s ease-out;
+    }
+
+    .buzzer-btn.disabled {
+      background: radial-gradient(circle at 35% 35%, #555577, var(--buzzer-disabled), #333355);
+      cursor: not-allowed;
+      box-shadow: 
+        0 4px 16px rgba(68, 68, 102, 0.3),
+        inset 0 -6px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .buzzer-btn.disabled:hover {
+      transform: none;
+    }
+
+    @keyframes buzzConfirm {
+      0% { transform: scale(0.95); }
+      40% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .buzzer-status {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .buzzer-status.pressed-status {
+      color: var(--success);
+      font-weight: 500;
+    }
+
+    .buzzer-status.disabled-status {
+      color: var(--danger);
+      font-weight: 500;
+    }
+
+    .press-time {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    /* Shockwave on press */
+    .shockwave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 220px;
+      height: 220px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 3px solid var(--buzzer-pressed);
+      animation: shockwave 0.8s ease-out forwards;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes shockwave {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+      }
+    }
+
+    /* Connection status */
+    .connection-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      z-index: 100;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .connection-bar.connected {
+      background: rgba(46, 204, 113, 0.1);
+      color: var(--success);
+      transform: translateY(-100%);
+    }
+
+    .connection-bar.disconnected {
+      background: rgba(231, 76, 60, 0.15);
+      color: var(--danger);
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .container { padding: 16px; }
+      .card { padding: 24px; }
+      .logo h1 { font-size: 1.8rem; }
+      .buzzer-btn { width: 180px; height: 180px; font-size: 1.3rem; }
+      .buzzer-ring { inset: -15px; }
+      .buzzer-ring:nth-child(2) { inset: -30px; }
+    }
+
+    #trail-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1; /* behind contents but above background */
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed Top Header -->
+  <header class="app-header">
+    <a href="https://elite.zyronix.org.in/events" target="_blank" class="header-link">
+      <span class="header-logo-text">ZYRONIX</span>
+    </a>
+  </header>
+
+  <!-- Interactive Trail Canvas -->
+  <canvas id="trail-canvas"></canvas>
+
+  <!-- Particles Background -->
+  <div class="particles-container" id="particles-container"></div>
+
+  <!-- Connection Status -->
+  <div id="connection-bar" class="connection-bar connected">
+    ⚠ Disconnected — Reconnecting...
+  </div>
+
+  <div class="container">
+    <!-- JOIN SCREEN -->
+    <div id="join-screen">
+      <div class="logo">
+        <div class="logo-container">
+          <img src="/images/logo.png" alt="Zyro Quiz Logo" class="logo-img">
+        </div>
+        <h1>Zyro Quiz</h1>
+        <p>Buzz in to answer first</p>
+      </div>
+      <div class="card">
+        <h2>Join the Game</h2>
+        <div class="input-group">
+          <label for="team-name">Team Name</label>
+          <input 
+            type="text" 
+            id="team-name" 
+            placeholder="Enter your team name" 
+            maxlength="30"
+            autocomplete="off"
+          >
+          <div id="error-msg" class="error-msg"></div>
+        </div>
+        <button id="join-btn" class="btn-primary">Continue</button>
+      </div>
+    </div>
+
+    <!-- BUZZER SCREEN -->
+    <div id="buzzer-screen">
+      <div class="team-badge">
+        <span class="dot"></span>
+        <span class="name" id="display-team-name"></span>
+      </div>
+
+      <div class="buzzer-wrapper">
+        <div class="buzzer-ring"></div>
+        <div class="buzzer-ring"></div>
+        <button id="buzzer-btn" class="buzzer-btn">BUZZ!</button>
+      </div>
+
+      <div id="buzzer-status" class="buzzer-status">Tap the buzzer to answer</div>
+      <div id="press-time" class="press-time"></div>
+    </div>
+  </div>
+
+  <script>window.BACKEND_URL = 'https://zyro-backend-example.vercel.app'; // Update this with your deployed backend URL</script>
+  <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+  <script>
+    // ===== Audio Context for Buzzer Sound =====
+    let audioCtx = null;
+    const customBuzzerAudio = new Audio('/sounds/buzzer.mp3');
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playBuzzerSound() {
+      customBuzzerAudio.play()
+        .then(() => { customBuzzerAudio.currentTime = 0; })
+        .catch(() => playSynthBuzzer());
+    }
+
+    function playSynthBuzzer() {
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(220, now);
+      osc1.frequency.exponentialRampToValueAtTime(110, now + 0.15);
+      gain1.gain.setValueAtTime(0.35, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc1.connect(gain1); gain1.connect(audioCtx.destination);
+      osc1.start(now); osc1.stop(now + 0.3);
+
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(440, now);
+      osc2.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+      gain2.gain.setValueAtTime(0.5, now);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc2.connect(gain2); gain2.connect(audioCtx.destination);
+      osc2.start(now); osc2.stop(now + 0.1);
+
+      const osc3 = audioCtx.createOscillator();
+      const gain3 = audioCtx.createGain();
+      osc3.type = 'sine';
+      osc3.frequency.setValueAtTime(880, now + 0.05);
+      gain3.gain.setValueAtTime(0, now);
+      gain3.gain.linearRampToValueAtTime(0.2, now + 0.06);
+      gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc3.connect(gain3); gain3.connect(audioCtx.destination);
+      osc3.start(now + 0.05); osc3.stop(now + 0.35);
+    }
+
+    // ===== Pusher Connection =====
+    // IMPORTANT: Replace 'YOUR_PUSHER_KEY' and 'YOUR_PUSHER_CLUSTER' with your actual values
+    // or set them via a meta tag / window variable injected by the server.
+    const PUSHER_KEY = window.PUSHER_KEY || 'a715c1e79235465c7a1e';
+    const PUSHER_CLUSTER = window.PUSHER_CLUSTER || 'ap2';
+
+    const pusherClient = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+    const channel = pusherClient.subscribe('quiz');
+
+    // Connection status
+    pusherClient.connection.bind('connected', () => {
+      connectionBar.className = 'connection-bar connected';
+    });
+    pusherClient.connection.bind('disconnected', () => {
+      connectionBar.className = 'connection-bar disconnected';
+    });
+    pusherClient.connection.bind('unavailable', () => {
+      connectionBar.className = 'connection-bar disconnected';
+    });
+
+    // ===== DOM Elements =====
+    const joinScreen = document.getElementById('join-screen');
+    const buzzerScreen = document.getElementById('buzzer-screen');
+    const teamNameInput = document.getElementById('team-name');
+    const joinBtn = document.getElementById('join-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const displayTeamName = document.getElementById('display-team-name');
+    const buzzerBtn = document.getElementById('buzzer-btn');
+    const buzzerStatus = document.getElementById('buzzer-status');
+    const pressTime = document.getElementById('press-time');
+    const connectionBar = document.getElementById('connection-bar');
+
+    let teamName = '';
+    let hasPressed = false;
+    let buzzerEnabled = true;
+
+    // ===== Join Team =====
+    async function joinTeam() {
+      const name = teamNameInput.value.trim();
+      if (!name) {
+        errorMsg.textContent = 'Please enter a team name';
+        errorMsg.style.display = 'block';
+        teamNameInput.focus();
+        return;
+      }
+
+      errorMsg.style.display = 'none';
+      joinBtn.disabled = true;
+      joinBtn.textContent = 'Joining...';
+
+      try {
+        const res = await fetch((window.BACKEND_URL || '') + '/api/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamName: name }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'Continue';
+          errorMsg.textContent = data.error || 'Failed to join. Try again.';
+          errorMsg.style.display = 'block';
+          teamNameInput.focus();
+          return;
+        }
+
+        // Success
+        teamName = data.teamName;
+        buzzerEnabled = data.buzzerEnabled;
+
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'Continue';
+        joinScreen.style.display = 'none';
+        buzzerScreen.style.display = 'block';
+        displayTeamName.textContent = teamName;
+        initAudio();
+
+        // Apply initial buzzer state
+        applyBuzzerState(buzzerEnabled);
+      } catch (err) {
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'Continue';
+        errorMsg.textContent = 'Network error. Please try again.';
+        errorMsg.style.display = 'block';
+      }
+    }
+
+    joinBtn.addEventListener('click', joinTeam);
+    teamNameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') joinTeam();
+      errorMsg.style.display = 'none';
+    });
+
+    // ===== Buzzer Press =====
+    buzzerBtn.addEventListener('click', async () => {
+      if (hasPressed || !buzzerEnabled || !teamName) return;
+
+      playBuzzerSound();
+
+      try {
+        const res = await fetch((window.BACKEND_URL || '') + '/api/buzz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamName }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.entry) {
+          // Show confirmed state immediately from response
+          handleBuzzerConfirmed(data.entry);
+        }
+      } catch (err) {
+        console.error('Buzz error:', err);
+      }
+    });
+
+    function handleBuzzerConfirmed(entry) {
+      hasPressed = true;
+      buzzerBtn.classList.add('pressed');
+      buzzerBtn.classList.remove('disabled');
+      buzzerBtn.textContent = '✓';
+      buzzerStatus.textContent = 'Buzzed in!';
+      buzzerStatus.className = 'buzzer-status pressed-status';
+      pressTime.textContent = `at ${entry.displayTime}`;
+
+      // Shockwave effect
+      const wrapper = document.querySelector('.buzzer-wrapper');
+      const wave = document.createElement('div');
+      wave.className = 'shockwave';
+      wrapper.appendChild(wave);
+      setTimeout(() => wave.remove(), 800);
+    }
+
+    function applyBuzzerState(enabled) {
+      buzzerEnabled = enabled;
+      if (!hasPressed) {
+        if (enabled) {
+          buzzerBtn.classList.remove('disabled');
+          buzzerBtn.textContent = 'BUZZ!';
+          buzzerStatus.textContent = 'Tap the buzzer to answer';
+          buzzerStatus.className = 'buzzer-status';
+        } else {
+          buzzerBtn.classList.add('disabled');
+          buzzerBtn.textContent = '🔒';
+          buzzerStatus.textContent = 'Buzzer is locked';
+          buzzerStatus.className = 'buzzer-status disabled-status';
+        }
+      }
+    }
+
+    // ===== Pusher Event Handlers =====
+
+    // Buzzer state changed by admin
+    channel.bind('buzzer-state', (enabled) => {
+      applyBuzzerState(enabled);
+    });
+
+    // Presses updated (clear event resets team buzzer)
+    channel.bind('presses-update', (presses) => {
+      if (presses.length === 0 && hasPressed) {
+        hasPressed = false;
+        buzzerBtn.classList.remove('pressed');
+        pressTime.textContent = '';
+        applyBuzzerState(buzzerEnabled);
+      }
+    });
+
+    // ===== Cleanup on page leave =====
+    window.addEventListener('beforeunload', () => {
+      if (teamName) {
+        // Use sendBeacon for reliable delivery on page close
+        navigator.sendBeacon((window.BACKEND_URL || '') + '/api/disconnect', JSON.stringify({ teamName }));
+      }
+    });
+
+    // Focus input on load
+    teamNameInput.focus();
+
+    // ===== Interactive Particle Trail (Mouse & Touch) =====
+    const canvas = document.getElementById('trail-canvas');
+    const ctx = canvas.getContext('2d');
+    let trailParticles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class TrailParticle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 2 + 1.2;
+        this.speedX = (Math.random() - 0.5) * 2.5;
+        this.speedY = (Math.random() - 0.5) * 2.5;
+        this.color = `rgba(255, ${Math.floor(Math.random() * 60 + 40)}, 60, ${Math.random() * 0.4 + 0.6})`;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.02 + 0.015;
+        this.angle = Math.random() * Math.PI;
+        this.spin = (Math.random() - 0.5) * 0.06;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.alpha -= this.decay;
+        this.angle += this.spin;
+      }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = this.size * 2.5;
+        ctx.shadowColor = '#ff3838';
+        ctx.moveTo(0, -this.size * 1.6);
+        ctx.quadraticCurveTo(0, 0, this.size * 1.6, 0);
+        ctx.quadraticCurveTo(0, 0, 0, this.size * 1.6);
+        ctx.quadraticCurveTo(0, 0, -this.size * 1.6, 0);
+        ctx.quadraticCurveTo(0, 0, 0, -this.size * 1.6);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function addTrail(x, y) {
+      for (let i = 0; i < 2; i++) trailParticles.push(new TrailParticle(x, y));
+    }
+
+    window.addEventListener('mousemove', (e) => addTrail(e.clientX, e.clientY));
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) addTrail(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) addTrail(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+
+    function animateTrail() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = trailParticles.length - 1; i >= 0; i--) {
+        const p = trailParticles[i];
+        p.update();
+        if (p.alpha <= 0) trailParticles.splice(i, 1);
+        else p.draw();
+      }
+      requestAnimationFrame(animateTrail);
+    }
+    animateTrail();
+
+    // Spawn Background Particles
+    function spawnParticles() {
+      const container = document.getElementById('particles-container');
+      const count = 18;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 3 + 2;
+        p.style.width = `${size}px`;
+        p.style.height = `${size}px`;
+        p.style.left = `${Math.random() * 100}vw`;
+        p.style.animationDuration = `${Math.random() * 10 + 10}s`;
+        p.style.animationDelay = `-${Math.random() * 20}s`;
+        container.appendChild(p);
+      }
+    }
+    spawnParticles();
+  </script>
+</body>
+</html>

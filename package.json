@@ -1,0 +1,19 @@
+{
+  "name": "zyro-quiz",
+  "version": "1.0.0",
+  "description": "Zyro Quiz - Real-time quiz buzzer competition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "express": "^5.2.1",
+    "pusher": "^5.3.4",
+    "socket.io": "^4.8.3"
+  }
+}

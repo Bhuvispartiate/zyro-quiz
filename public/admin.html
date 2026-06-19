@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zyro Quiz – Admin Panel</title>
+  <meta name="description" content="Zyro Quiz Admin Panel – Manage buzzer, view timestamps, and control the quiz.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #050508;
+      --bg-secondary: #0c0c10;
+      --bg-card: rgba(20, 20, 25, 0.6);
+      --bg-card-hover: rgba(30, 20, 25, 0.8);
+      --text-primary: #f5f5fa;
+      --text-secondary: #a08888;
+      --text-muted: #705555;
+      --accent: #ff3838;
+      --accent-glow: rgba(255, 56, 56, 0.3);
+      --danger: #ff3838;
+      --danger-glow: rgba(255, 56, 56, 0.2);
+      --success: #2ecc71;
+      --success-glow: rgba(46, 204, 113, 0.2);
+      --warning: #f39c12;
+      --border: rgba(255, 56, 56, 0.15);
+      --border-light: rgba(255, 56, 56, 0.08);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(ellipse at 30% 20%, rgba(255, 56, 56, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 80%, rgba(255, 56, 56, 0.04) 0%, transparent 60%);
+      z-index: -1;
+    }
+
+    /* Header */
+    .header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(5, 5, 8, 0.85);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-logo-container {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 56, 56, 0.3);
+      box-shadow: 0 0 15px rgba(255, 56, 56, 0.3);
+    }
+
+    .header-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 0%, #ff9999 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header .badge {
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-admin {
+      background: rgba(255, 56, 56, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(255, 56, 56, 0.2);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .connected-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .connected-count .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Main content */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* Controls section */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .control-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(20px);
+      transition: all 0.3s ease;
+    }
+
+    .control-card:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .control-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    /* Toggle switch */
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toggle-status {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .toggle-status.enabled {
+      color: var(--success);
+    }
+
+    .toggle-status.disabled {
+      color: var(--danger);
+    }
+
+    .toggle {
+      position: relative;
+      width: 56px;
+      height: 30px;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      display: none;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      border-radius: 100px;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      background: var(--danger);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: rgba(46, 204, 113, 0.2);
+      border-color: rgba(46, 204, 113, 0.3);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(26px);
+      background: var(--success);
+    }
+
+    /* Clear button */
+    .btn-clear {
+      width: 100%;
+      padding: 12px 20px;
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid rgba(231, 76, 60, 0.2);
+      border-radius: var(--radius-sm);
+      color: var(--danger);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-clear:hover {
+      background: rgba(231, 76, 60, 0.18);
+      box-shadow: 0 4px 16px var(--danger-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-clear:active {
+      transform: translateY(0);
+    }
+
+    .btn-clear:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Export button */
+    .btn-export {
+      padding: 8px 16px;
+      background: rgba(255, 56, 56, 0.1);
+      border: 1px solid rgba(255, 56, 56, 0.25);
+      border-radius: var(--radius-sm);
+      color: var(--accent);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-export:hover {
+      background: rgba(255, 56, 56, 0.2);
+      box-shadow: 0 4px 12px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-export:active {
+      transform: translateY(0);
+    }
+
+    .btn-export:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Timestamps table */
+    .table-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+    }
+
+    .table-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .table-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .table-count {
+      padding: 2px 10px;
+      background: rgba(108, 92, 231, 0.15);
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      padding: 14px 24px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-light);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.2s ease;
+      animation: rowSlideIn 0.3s ease-out;
+    }
+
+    @keyframes rowSlideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody td {
+      padding: 16px 24px;
+      font-size: 0.9rem;
+    }
+
+    .rank {
+      width: 60px;
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .rank-1 {
+      background: linear-gradient(135deg, #f1c40f, #f39c12);
+      color: #000;
+      box-shadow: 0 2px 8px rgba(241, 196, 15, 0.3);
+    }
+
+    .rank-2 {
+      background: linear-gradient(135deg, #bdc3c7, #95a5a6);
+      color: #000;
+    }
+
+    .rank-3 {
+      background: linear-gradient(135deg, #e67e22, #d35400);
+      color: #fff;
+    }
+
+    .rank-other {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+    }
+
+    .team-name-cell {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .timestamp-cell {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 60px 24px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    .empty-state h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Connected teams list */
+    .teams-list {
+      margin-top: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+    }
+
+    .teams-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .teams-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .teams-grid {
+      padding: 20px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .team-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      animation: chipIn 0.3s ease-out;
+    }
+
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .team-chip .chip-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+    }
+
+    .teams-empty {
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* Live indicator */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(231, 76, 60, 0.12);
+      border: 1px solid rgba(231, 76, 60, 0.2);
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--danger);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .live-badge .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--danger);
+      border-radius: 50%;
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+
+    /* Connection bar */
+    .connection-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      z-index: 100;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .connection-bar.connected {
+      background: rgba(46, 204, 113, 0.1);
+      color: var(--success);
+      transform: translateY(100%);
+    }
+
+    .connection-bar.disconnected {
+      background: rgba(231, 76, 60, 0.15);
+      color: var(--danger);
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .header { padding: 16px; }
+      .main { padding: 16px; }
+      .controls { grid-template-columns: 1fr; }
+      thead th, tbody td { padding: 12px 16px; }
+      .header h1 { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo-container">
+        <img src="/images/logo.png" alt="Zyro Quiz Logo" class="header-logo-img">
+      </div>
+      <h1>Zyro Quiz</h1>
+      <span class="badge badge-admin">Admin</span>
+    </div>
+    <div class="header-right">
+      <div class="connected-count">
+        <span class="dot"></span>
+        <span id="team-count">0 teams connected</span>
+      </div>
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        Live
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Controls -->
+    <section class="controls">
+      <div class="control-card">
+        <div class="control-label">Buzzer Control</div>
+        <div class="toggle-wrapper">
+          <span id="toggle-status" class="toggle-status enabled">Enabled</span>
+          <label class="toggle">
+            <input type="checkbox" id="buzzer-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="control-card">
+        <div class="control-label">Reset Round</div>
+        <button id="clear-btn" class="btn-clear">
+          <span>🗑</span>
+          Clear All Timestamps
+        </button>
+      </div>
+    </section>
+
+    <!-- Timestamps Table -->
+    <section class="table-section">
+      <div class="table-header">
+        <h2>
+          Buzzer Presses
+          <span id="press-count" class="table-count">0</span>
+        </h2>
+        <button id="export-btn" class="btn-export" disabled>
+          <span>📥</span> Export CSV
+        </button>
+      </div>
+      <div id="table-content">
+        <div class="empty-state">
+          <div class="empty-icon">🔔</div>
+          <h3>No buzzer presses yet</h3>
+          <p>Waiting for teams to buzz in...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Connected Teams -->
+    <section class="teams-list">
+      <div class="teams-header">
+        <h2>
+          Connected Teams
+          <span id="teams-count-badge" class="table-count">0</span>
+        </h2>
+      </div>
+      <div id="teams-content">
+        <div class="teams-empty">No teams connected yet</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Connection bar -->
+  <div id="connection-bar" class="connection-bar connected">
+    ⚠ Disconnected — Reconnecting...
+  </div>
+
+  <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+  <script>
+    // ===== Pusher Connection =====
+    const PUSHER_KEY = window.PUSHER_KEY || 'a715c1e79235465c7a1e';
+    const PUSHER_CLUSTER = window.PUSHER_CLUSTER || 'ap2';
+
+    const pusherClient = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+    const channel = pusherClient.subscribe('quiz');
+
+    // ===== DOM =====
+    const buzzerToggle = document.getElementById('buzzer-toggle');
+    const toggleStatus = document.getElementById('toggle-status');
+    const clearBtn = document.getElementById('clear-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const tableContent = document.getElementById('table-content');
+    const pressCount = document.getElementById('press-count');
+    const teamsContent = document.getElementById('teams-content');
+    const teamCount = document.getElementById('team-count');
+    const teamsCountBadge = document.getElementById('teams-count-badge');
+    const connectionBar = document.getElementById('connection-bar');
+
+    let currentPresses = [];
+
+    // ===== Connection Status =====
+    pusherClient.connection.bind('connected', () => {
+      connectionBar.className = 'connection-bar connected';
+      loadInitialState();
+    });
+    pusherClient.connection.bind('disconnected', () => {
+      connectionBar.className = 'connection-bar disconnected';
+    });
+    pusherClient.connection.bind('unavailable', () => {
+      connectionBar.className = 'connection-bar disconnected';
+    });
+
+    // ===== Load current state on connect =====
+    async function loadInitialState() {
+      try {
+        const res = await fetch('/api/admin-join');
+        const data = await res.json();
+        if (res.ok) {
+          applyBuzzerState(data.buzzerEnabled);
+          renderPresses(data.presses);
+          renderTeams(data.teams);
+        }
+      } catch (err) {
+        console.error('Failed to load initial state:', err);
+      }
+    }
+
+    // ===== Toggle Buzzer =====
+    buzzerToggle.addEventListener('change', async () => {
+      const enabled = buzzerToggle.checked;
+      try {
+        await fetch('/api/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled }),
+        });
+      } catch (err) {
+        console.error('Toggle error:', err);
+        // Revert toggle on failure
+        buzzerToggle.checked = !enabled;
+      }
+    });
+
+    // ===== Clear Timestamps =====
+    clearBtn.addEventListener('click', async () => {
+      try {
+        await fetch('/api/clear', { method: 'POST' });
+      } catch (err) {
+        console.error('Clear error:', err);
+      }
+    });
+
+    // ===== Helper: Apply Buzzer State =====
+    function applyBuzzerState(enabled) {
+      buzzerToggle.checked = enabled;
+      toggleStatus.textContent = enabled ? 'Enabled' : 'Disabled';
+      toggleStatus.className = `toggle-status ${enabled ? 'enabled' : 'disabled'}`;
+    }
+
+    // ===== Helper: Render Presses Table =====
+    function renderPresses(presses) {
+      currentPresses = presses;
+      pressCount.textContent = presses.length;
+      clearBtn.disabled = presses.length === 0;
+      exportBtn.disabled = presses.length === 0;
+
+      if (presses.length === 0) {
+        tableContent.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔔</div>
+            <h3>No buzzer presses yet</h3>
+            <p>Waiting for teams to buzz in...</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th class="rank">Rank</th>
+                <th>Team Name</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      presses.forEach((entry, i) => {
+        const rank = i + 1;
+        let rankClass = 'rank-other';
+        if (rank === 1) rankClass = 'rank-1';
+        else if (rank === 2) rankClass = 'rank-2';
+        else if (rank === 3) rankClass = 'rank-3';
+
+        html += `
+          <tr>
+            <td class="rank">
+              <span class="rank-badge ${rankClass}">${rank}</span>
+            </td>
+            <td class="team-name-cell">${escapeHtml(entry.teamName)}</td>
+            <td class="timestamp-cell">${entry.displayTime}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table></div>';
+      tableContent.innerHTML = html;
+    }
+
+    // ===== Helper: Render Teams =====
+    function renderTeams(teams) {
+      const count = teams.length;
+      teamCount.textContent = `${count} team${count !== 1 ? 's' : ''} connected`;
+      teamsCountBadge.textContent = count;
+
+      if (count === 0) {
+        teamsContent.innerHTML = '<div class="teams-empty">No teams connected yet</div>';
+        return;
+      }
+
+      let html = '<div class="teams-grid">';
+      teams.forEach((name) => {
+        html += `
+          <span class="team-chip">
+            <span class="chip-dot"></span>
+            ${escapeHtml(name)}
+          </span>
+        `;
+      });
+      html += '</div>';
+      teamsContent.innerHTML = html;
+    }
+
+    // ===== Pusher Event Handlers =====
+    channel.bind('buzzer-state', (enabled) => {
+      applyBuzzerState(enabled);
+    });
+
+    channel.bind('presses-update', (presses) => {
+      renderPresses(presses);
+    });
+
+    channel.bind('teams-update', (teams) => {
+      renderTeams(teams);
+    });
+
+    // ===== Export CSV =====
+    exportBtn.addEventListener('click', () => {
+      if (currentPresses.length === 0) return;
+
+      let csvContent = '\uFEFFRank,Team Name,Timestamp\r\n';
+      currentPresses.forEach((entry, index) => {
+        const escapedName = `"${entry.teamName.replace(/"/g, '""')}"`;
+        const displayTime = `"${entry.displayTime}"`;
+        csvContent += `${index + 1},${escapedName},${displayTime}\r\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `zyro_quiz_buzzer_presses_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

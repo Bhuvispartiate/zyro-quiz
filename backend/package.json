@@ -1,0 +1,9 @@
+{
+  "name": "zyro-quiz-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Zyro Quiz using Vercel Serverless Functions",
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "pusher": "^5.3.4"
+  }
+}
